@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from datetime import datetime
 import requests
+from models import Event, Profile
 
 app = FastAPI()
 url_api = "https://kudago.com/public-api/v1.4"
@@ -8,12 +9,20 @@ url_api = "https://kudago.com/public-api/v1.4"
 
 @app.post("/signin")
 async def login(login: str, password: str):
-    return {"access_token": "None"}
+    return {"access_token": "None"}  # Заглушка
 
 
 @app.post("/singup")
 async def register(name: str, login: str, password: str):
-    return {"access_token": "None"}
+    return {"access_token": "None"}  # Заглушка
+
+
+@app.get("/profile")
+async def get_profile(access_token: str):
+    profile = Profile(id=1,
+                      name="None",
+                      login="None")  # Заглушка
+    return {"profile": profile}
 
 
 @app.get("/api/events")
@@ -28,17 +37,17 @@ async def events(access_token: str, offset: int, limit: int):
             place = place.json()["address"]
             date = i["dates"][0]["end"]
             date = datetime.fromtimestamp(date).isoformat()  # Перевод даты в ISO формат
-            event_list.append({"event": {"images": i["images"][0]["image"],
-                                         "title": i["title"],
-                                         "description": i["description"],
-                                         "place": place,
-                                         "date": date
-                                         }})
+            event = Event(image=i["images"][0]["image"],
+                          title=i["title"],
+                          description=i["description"],
+                          place=place,
+                          date=date)
+            event_list.append({"event": event})
     return event_list
 
 
 @app.get("/api/event")
-async def events(access_token: str, id: int):
+async def event(access_token: str, id: int):
     r = requests.get(f"{url_api}/events/?fields=dates,title,description,place,"f"images&location=spb&ids={id}")
     r = r.json()["results"][0]
     place = requests.get(f'https://kudago.com/public-api/v1.4/places/{r["place"]["id"]}/'
@@ -46,10 +55,9 @@ async def events(access_token: str, id: int):
     place = place.json()["address"]
     date = r["dates"][0]["end"]
     date = datetime.fromtimestamp(date).isoformat()  # Перевод даты в ISO формат
-    event = {"event": {"images": r["images"][0]["image"],
-                       "title": r["title"],
-                       "description": r["description"],
-                       "place": place,
-                       "date": date
-                       }}
-    return event
+    event = Event(image=r["images"][0]["image"],
+                  title=r["title"],
+                  description=r["description"],
+                  place=place,
+                  date=date)
+    return {"event": event}
