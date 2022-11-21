@@ -1,18 +1,17 @@
 import sqlite3
 from results import User
 
-connection = sqlite3.connect('users.db')
-cursor = connection.cursor()
+connect = sqlite3.connect('users.db')
+creator = connect.cursor()
 # cursor.execute("DROP TABLE IF EXISTS Users")
-cursor.execute('''CREATE TABLE IF NOT EXISTS Users
+creator.execute('''CREATE TABLE IF NOT EXISTS Users
               (ID INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT(30), login TEXT(15) UNIQUE, hash TEXT);''')
+connect.close()
 
 
 class DBInteractor:
     @staticmethod
     def insert_user(user: User):
-        global connection
-        global cursor
         connection = sqlite3.connect('users.db')
         cursor = connection.cursor()
         try:
@@ -21,16 +20,15 @@ class DBInteractor:
                                                                                                      user.hash)
             cursor.execute(statement)
             connection.commit()
-            connection.close()
         except (sqlite3.Error, sqlite3.Warning) as err:
             print(err, "DB PROBLEM")
             return False
+        finally:
+            connection.close()
         return True
 
     @staticmethod
     def select_user(user: User):
-        global connection
-        global cursor
         connection = sqlite3.connect('users.db')
         cursor = connection.cursor()
         try:
@@ -38,18 +36,17 @@ class DBInteractor:
             cursor.execute(statement)
             result = cursor.fetchall()
             connection.commit()
-            connection.close()
             if result is None or len(result) == 0:
                 return None
         except (sqlite3.Error, sqlite3.Warning) as err:
             print(err, "DB PROBLEM")
             return None
+        finally:
+            connection.close()
         return result[0]
 
     @staticmethod
     def find_by_id(idf: str):
-        global connection
-        global cursor
         connection = sqlite3.connect('users.db')
         cursor = connection.cursor()
         try:
@@ -57,10 +54,11 @@ class DBInteractor:
             cursor.execute(statement)
             result = cursor.fetchall()
             connection.commit()
-            connection.close()
             if result is None or len(result) == 0:
                 return None
         except (sqlite3.Error, sqlite3.Warning) as err:
             print(err, "DB PROBLEM")
             return None
+        finally:
+            connection.close()
         return result[0]

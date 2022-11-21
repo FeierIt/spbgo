@@ -35,9 +35,6 @@ class UserInteractor:
     @staticmethod
     def authorize(login: str, password: str):
         if Validator.validate_auth_data(login, password):
-            # hash_pwd = str(pwd_context.hash(password))
-            # print(hash_pwd)
-            # user = User(login, hash_pwd)
             user = User(login, pwd=password)
             data = DBInteractor.select_user(user)
             if data is None:
