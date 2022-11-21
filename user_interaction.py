@@ -56,15 +56,8 @@ class UserInteractor:
             return "No user found!"
         return "Found you!"
 
-        #     idf = DBInteractor.select_user(user)
-        #     if idf is None:
-        #         return "No such user found!"
-        #     return UserInteractor.create_token(idf)
-        # return "Invalid data!"
-
     @staticmethod
     def create_token(idf: str):
-        # encoded_jwt = jwt.encode({"sub": idf}, SECRET_KEY, algorithm=ALGORITHM)
         encoded_jwt = jwt.encode({"sub": idf}, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
 

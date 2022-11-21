@@ -11,3 +11,14 @@ class User:
         self.login = login
         self.hash = hash_pwd
         self.pwd = pwd
+
+
+class UserForReg(BaseModel):
+    name: str
+    login: str
+    password: str
+
+
+class UserForAuth(BaseModel):
+    login: str
+    password: str
