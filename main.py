@@ -1,20 +1,29 @@
-from fastapi import FastAPI
+import uvicorn
+from fastapi import FastAPI, HTTPException
 from datetime import datetime
 import requests
 from models import Event, Profile
+from user_interaction import UserInteractor
+from results import UserData, UserForAuth, UserForReg
 
 app = FastAPI()
 url_api = "https://kudago.com/public-api/v1.4"
 
 
 @app.post("/signin")
-async def login(login: str, password: str):
-    return {"access_token": "None"}  # Заглушка
+async def login(user: UserForAuth):
+    result = UserInteractor.authorize(user.login, user.password)
+    if result.success:
+        return UserData(access_token=result.token)
+    raise HTTPException(400, detail=result.message)
 
 
-@app.post("/singup")
-async def register(name: str, login: str, password: str):
-    return {"access_token": "None"}  # Заглушка
+@app.post("/signup")
+async def register(user: UserForReg):
+    result = UserInteractor.register(user.name, user.login, user.password)
+    if result.success:
+        return None
+    raise HTTPException(400, detail=result.message)
 
 
 @app.get("/profile")
@@ -61,3 +70,7 @@ async def event(access_token: str, id: int):
                   place=place,
                   date=date)
     return {"event": event}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
