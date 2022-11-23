@@ -25,7 +25,7 @@ async def get_profile(access_token: str):
     return {"profile": profile}
 
 
-@app.get("/api/events")
+@app.get("/events")
 async def events(access_token: str, offset: int, limit: int):
     r = requests.get(f"{url_api}/events/?page={offset}&page_size={limit}&fields=dates,title,description,place,"
                      f"images&order_by=id&location=spb&")
@@ -46,7 +46,7 @@ async def events(access_token: str, offset: int, limit: int):
     return event_list
 
 
-@app.get("/api/event")
+@app.get("/event")
 async def event(access_token: str, id: int):
     r = requests.get(f"{url_api}/events/?fields=dates,title,description,place,"f"images&location=spb&ids={id}")
     r = r.json()["results"][0]
