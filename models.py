@@ -7,6 +7,8 @@ class Event(BaseModel):
     description: str
     place: str
     date: str
+    is_free: bool
+    weekday: str
 
 
 class Profile(BaseModel):
