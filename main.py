@@ -56,6 +56,8 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
                           is_free=False,  # Заглушка
                           weekday=weekday)
             event_list.append({"event": event})
+        else:
+            event_list.append({"event": "None"})
     return event_list
 
 
