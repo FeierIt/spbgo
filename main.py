@@ -37,28 +37,33 @@ async def get_profile(access_token: str | None = Header(default=None)):
 
 @app.get("/events")
 async def events(offset: int, limit: int, access_token: str | None = Header(default=None)):
-    r = requests.get(f"{url_api}/events/?page={offset}&page_size={limit}&fields=dates,title,description,place,"
-                     f"images&order_by=id&location=spb&")
-    event_list = []
-    for i in r.json()["results"]:  # Проход по всем событиям для нахождения адреса
-        if i["place"] is not None:
-            place = requests.get(f'https://kudago.com/public-api/v1.4/places/{i["place"]["id"]}/'
-                                 f'?fields=title,address')  # Поиск адреса
-            place = place.json()["address"]
-            date = i["dates"][0]["end"]
-            date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
-            weekday = WeekdayNameResolver.resolve(date)
-            event = Event(image=i["images"][0]["image"],
-                          title=i["title"],
-                          description=i["description"],
-                          place=place,
-                          date=date.isoformat(),  # Перевод даты в ISO формат
-                          is_free=False,  # Заглушка
-                          weekday=weekday)
-            event_list.append({"event": event})
-        else:
-            event_list.append({"event": "None"})
-    return event_list
+    if offset % limit != 0:
+        return{"error": 400}
+    else:
+        page = offset // limit + 1
+        r = requests.get(f"{url_api}/events/?page={page}&page_size={limit}&fields=dates,title,description,place,"
+                         f"images&order_by=id&location=spb&")
+        event_list = []
+        for i in r.json()["results"]:  # Проход по всем событиям для нахождения адреса
+            if i["place"] is not None:
+                place = requests.get(f'https://kudago.com/public-api/v1.4/places/{i["place"]["id"]}/'
+                                     f'?fields=title,address')  # Поиск адреса
+                place = place.json()["address"]
+                date = i["dates"][0]["end"]
+                date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
+                weekday = WeekdayNameResolver.resolve(date)
+                event = Event(image=i["images"][0]["image"],
+                              title=i["title"],
+                              description=i["description"],
+                              place=place,
+                              date=date.isoformat(),  # Перевод даты в ISO формат
+                              is_free=False,  # Заглушка
+                              weekday=weekday)
+                event_list.append({"event": event})
+            else:
+                event_list.append({"event": "None"})  # заглушка
+        return event_list
+
 
 
 @app.get("/event")
