@@ -40,7 +40,7 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
     if offset % limit != 0:
         return{"error": 400}
     else:
-        page = offset / limit + 1
+        page = offset // limit + 1
         r = requests.get(f"{url_api}/events/?page={page}&page_size={limit}&fields=dates,title,description,place,"
                          f"images&order_by=id&location=spb&")
         event_list = []
