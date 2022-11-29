@@ -1,4 +1,5 @@
 import uvicorn
+import math
 from fastapi import FastAPI, HTTPException, Request, Header
 from datetime import datetime
 import requests
@@ -40,28 +41,39 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
     if offset % limit != 0:
         return{"error": 400}
     else:
-        page = offset // limit + 1
-        r = requests.get(f"{url_api}/events/?page={page}&page_size={limit}&fields=dates,title,description,place,"
-                         f"images&order_by=id&location=spb&")
+        page = math.floor(offset / 100) + 1  # с какой страницы начинать загружать events
+        print(page)
+        offset %= 100  # оставшийся сдвиг
+        offset_flag = False
+        url_events = url_api + "/events/?page={}&page_size=100&" \
+                               "fields=dates,title,description,place,images&order_by=id&location=spb&"
         event_list = []
-        for i in r.json()["results"]:  # Проход по всем событиям для нахождения адреса
-            if i["place"] is not None:
-                place = requests.get(f'https://kudago.com/public-api/v1.4/places/{i["place"]["id"]}/'
-                                     f'?fields=title,address')  # Поиск адреса
-                place = place.json()["address"]
-                date = i["dates"][0]["end"]
-                date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
-                weekday = WeekdayNameResolver.resolve(date)
-                event = Event(image=i["images"][0]["image"],
-                              title=i["title"],
-                              description=i["description"],
-                              place=place,
-                              date=date.isoformat(),  # Перевод даты в ISO формат
-                              is_free=False,  # Заглушка
-                              weekday=weekday)
-                event_list.append({"event": event})
+        while True:
+            r = requests.get(url_events.format(page)).json()["results"]
+            if not offset_flag:
+                r = r[offset:]
+                offset_flag = True
+            for i in r:
+                if i["place"] is not None:
+                    place = requests.get(f'https://kudago.com/public-api/v1.4/places/{i["place"]["id"]}/'
+                                         f'?fields=title,address')  # Поиск адреса
+                    place = place.json()["address"]
+                    date = i["dates"][0]["end"]
+                    date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
+                    weekday = WeekdayNameResolver.resolve(date)
+                    event = Event(image=i["images"][0]["image"],
+                                  title=i["title"],
+                                  description=i["description"],
+                                  place=place,
+                                  date=date.isoformat(),  # Перевод даты в ISO формат
+                                  is_free=False,  # Заглушка
+                                  weekday=weekday)
+                    event_list.append({"event": event})
+                if len(event_list) == limit:
+                    break
             else:
-                event_list.append({"event": "None"})  # заглушка
+                continue
+            break
         return event_list
 
 
