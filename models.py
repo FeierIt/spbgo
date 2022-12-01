@@ -9,6 +9,7 @@ class Event(BaseModel):
     date: str
     is_free: bool
     weekday: str
+    id: int
 
 
 class Profile(BaseModel):

@@ -48,10 +48,8 @@ class UserInteractor:
     def authorized_request(token: str):
         idf = UserInteractor.get_id_by_token(token)
         if idf is None:
-            return "Wrong token!"
-        if DBInteractor.find_by_id(idf) is None:
-            return "No user found!"
-        return "Found you!"
+            return None
+        return DBInteractor.find_by_id(idf)
 
     @staticmethod
     def create_token(idf: str):
