@@ -50,7 +50,7 @@ class DBInteractor:
         connection = sqlite3.connect('users.db')
         cursor = connection.cursor()
         try:
-            statement = 'SELECT * FROM Users WHERE ID = "{0}";'.format(idf)
+            statement = 'SELECT ID, name, login FROM Users WHERE ID = "{0}";'.format(idf)
             cursor.execute(statement)
             result = cursor.fetchall()
             connection.commit()

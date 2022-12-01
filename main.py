@@ -7,6 +7,7 @@ from models import Event, Profile
 from user_interaction import UserInteractor
 from results import UserData, UserForAuth, UserForReg
 from weekday import WeekdayNameResolver
+import time
 
 app = FastAPI()
 url_api = "https://kudago.com/public-api/v1.4"
@@ -30,26 +31,31 @@ async def register(user: UserForReg):
 
 @app.get("/profile")
 async def get_profile(access_token: str | None = Header(default=None)):
-    profile = Profile(id=1,
-                      name="None",
-                      login="None")  # Заглушка
-    return {"profile": profile}
+    if access_token is None:
+        raise HTTPException(400, detail="no token!")
+    user = UserInteractor.authorized_request(access_token)
+    if user is None:
+        raise HTTPException(400, detail="wrong token!")
+    return Profile(id=user[0], name=user[1], login=user[2])
 
 
 @app.get("/events")
 async def events(offset: int, limit: int, access_token: str | None = Header(default=None)):
+    await get_profile(access_token)
     if offset % limit != 0:
-        return{"error": 400}
+        raise HTTPException(400)
     else:
         page = math.floor(offset / 100) + 1  # с какой страницы начинать загружать events
         print(page)
         offset %= 100  # оставшийся сдвиг
         offset_flag = False
         url_events = url_api + "/events/?page={}&page_size=100&" \
-                               "fields=dates,title,description,place,images&order_by=id&location=spb&"
+                               "fields=dates,title,description,id,place,images&order_by=id&location=spb&actual_since={}"  # здесь actual_since
         event_list = []
+        timing = int(time.time())
         while True:
-            r = requests.get(url_events.format(page)).json()["results"]
+            r = requests.get(url_events.format(page, timing)).json()["results"] # здесь timing
+
             if not offset_flag:
                 r = r[offset:]
                 offset_flag = True
@@ -67,7 +73,7 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
                                   place=place,
                                   date=date.isoformat(),  # Перевод даты в ISO формат
                                   is_free=False,  # Заглушка
-                                  weekday=weekday)
+                                  weekday=weekday, id=i["id"])
                     event_list.append({"event": event})
                 if len(event_list) == limit:
                     break
@@ -77,10 +83,10 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
         return event_list
 
 
-
 @app.get("/event")
 async def event(id: int, access_token: str | None = Header(default=None)):
-    r = requests.get(f"{url_api}/events/?fields=dates,title,description,place,"f"images&location=spb&ids={id}")
+    await get_profile(access_token)
+    r = requests.get(f"{url_api}/events/?fields=dates,title,description,id,place,"f"images&location=spb&ids={id}")
     r = r.json()["results"][0]
     place = requests.get(f'https://kudago.com/public-api/v1.4/places/{r["place"]["id"]}/'
                          f'?fields=title,address')  # Поиск адреса
@@ -94,7 +100,7 @@ async def event(id: int, access_token: str | None = Header(default=None)):
                   place=place,
                   date=date.isoformat(),  # Перевод даты в ISO формат
                   is_free=False,  # Заглушка
-                  weekday=weekday)
+                  weekday=weekday, id=r["id"])
     return {"event": event}
 
 
