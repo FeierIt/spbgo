@@ -54,7 +54,7 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
         event_list = []
         timing = int(time.time())
         while True:
-            r = requests.get(url_events.format(page, timing)).json()["results"] # здесь timing
+            r = requests.get(url_events.format(page, timing)).json()["results"]  # здесь timing
 
             if not offset_flag:
                 r = r[offset:]
@@ -64,8 +64,11 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
                     place = requests.get(f'https://kudago.com/public-api/v1.4/places/{i["place"]["id"]}/'
                                          f'?fields=title,address')  # Поиск адреса
                     place = place.json()["address"]
-                    date = i["dates"][0]["end"]
-                    date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
+                    date = i["dates"][-1]["end"]
+                    try:
+                        date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
+                    except (OSError, OverflowError):
+                        date = datetime.fromtimestamp(0)
                     weekday = WeekdayNameResolver.resolve(date)
                     event = Event(image=i["images"][0]["image"],
                                   title=i["title"],
@@ -91,8 +94,11 @@ async def event(id: int, access_token: str | None = Header(default=None)):
     place = requests.get(f'https://kudago.com/public-api/v1.4/places/{r["place"]["id"]}/'
                          f'?fields=title,address')  # Поиск адреса
     place = place.json()["address"]
-    date = r["dates"][0]["end"]
-    date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
+    date = r["dates"][-1]["end"]
+    try:
+        date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
+    except (OSError, OverflowError):
+        date = datetime.fromtimestamp(0)
     weekday = WeekdayNameResolver.resolve(date)
     event = Event(image=r["images"][0]["image"],
                   title=r["title"],
