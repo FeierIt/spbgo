@@ -7,6 +7,7 @@ from models import Event, Profile
 from user_interaction import UserInteractor
 from results import UserData, UserForAuth, UserForReg
 from weekday import WeekdayNameResolver
+import time
 
 app = FastAPI()
 url_api = "https://kudago.com/public-api/v1.4"
@@ -39,15 +40,17 @@ async def get_profile(access_token: str | None = Header(default=None)):
 
 @app.get("/events")
 async def events(offset: int, limit: int, access_token: str | None = Header(default=None)):
+    await get_profile(access_token)
     if offset % limit != 0:
-        return{"error": 400}
+        raise HTTPException(400)
     else:
         page = 1
         url_events = url_api + "/events/?page={}&page_size=100&" \
                                "fields=dates,title,description,place,images&order_by=id&location=spb&"
         event_list = []
+        timing = int(time.time())
         while True:
-            r = requests.get(url_events.format(page)).json()["results"]
+            r = requests.get(url_events.format(page, timing)).json()["results"]
             for i in r:
                 if i["place"] is not None and offset == 0:
                     if i["place"]["id"] in places:
@@ -62,7 +65,10 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
                             place = "г. Санкт-Петербург"
                         places[i["place"]["id"]] = place
                     date = i["dates"][0]["end"]
-                    date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
+                    try:
+                        date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
+                    except (OSError, OverflowError):
+                        date = datetime.fromtimestamp(0)
                     weekday = WeekdayNameResolver.resolve(date)
                     event = Event(image=i["images"][0]["image"],
                                   title=i["title"],
@@ -70,7 +76,9 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
                                   place=place,
                                   date=date.isoformat(),  # Перевод даты в ISO формат
                                   is_free=False,  # Заглушка
-                                  weekday=weekday)
+                                  weekday=weekday,
+                                  id=i["id"]
+                                  )
                     event_list.append({"event": event})
                 elif i["place"] is not None and offset != 0:
                     offset -= 1
