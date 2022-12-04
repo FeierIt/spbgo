@@ -10,6 +10,7 @@ from weekday import WeekdayNameResolver
 
 app = FastAPI()
 url_api = "https://kudago.com/public-api/v1.4"
+places = {}
 
 
 @app.post("/signin")
@@ -41,23 +42,25 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
     if offset % limit != 0:
         return{"error": 400}
     else:
-        page = math.floor(offset / 100) + 1  # с какой страницы начинать загружать events
-        print(page)
-        offset %= 100  # оставшийся сдвиг
-        offset_flag = False
+        page = 1
         url_events = url_api + "/events/?page={}&page_size=100&" \
                                "fields=dates,title,description,place,images&order_by=id&location=spb&"
         event_list = []
         while True:
             r = requests.get(url_events.format(page)).json()["results"]
-            if not offset_flag:
-                r = r[offset:]
-                offset_flag = True
             for i in r:
-                if i["place"] is not None:
-                    place = requests.get(f'https://kudago.com/public-api/v1.4/places/{i["place"]["id"]}/'
-                                         f'?fields=title,address')  # Поиск адреса
-                    place = place.json()["address"]
+                if i["place"] is not None and offset == 0:
+                    if i["place"]["id"] in places:
+                        place = places[i["place"]["id"]]
+                    else:
+                        place = requests.get(f'https://kudago.com/public-api/v1.4/places/{i["place"]["id"]}/'
+                                             f'?fields=title,address')  # Поиск адреса
+                        place = place.json()
+                        if "address" in place:
+                            place = place["address"]
+                        else:
+                            place = "г. Санкт-Петербург"
+                        places[i["place"]["id"]] = place
                     date = i["dates"][0]["end"]
                     date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
                     weekday = WeekdayNameResolver.resolve(date)
@@ -69,9 +72,12 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
                                   is_free=False,  # Заглушка
                                   weekday=weekday)
                     event_list.append({"event": event})
+                elif i["place"] is not None and offset != 0:
+                    offset -= 1
                 if len(event_list) == limit:
                     break
             else:
+                page += 1
                 continue
             break
         return event_list
