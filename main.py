@@ -46,7 +46,7 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
     else:
         page = 1
         url_events = url_api + "/events/?page={}&page_size=100&" \
-                               "fields=dates,title,description,place,images&order_by=id&location=spb&"
+                               "fields=dates,title,description,id,place,images&order_by=id&location=spb&actual_since={}"  # здесь actual_since
         event_list = []
         timing = int(time.time())
         while True:
@@ -64,7 +64,7 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
                         else:
                             place = "г. Санкт-Петербург"
                         places[i["place"]["id"]] = place
-                    date = i["dates"][0]["end"]
+                    date = i["dates"][-1]["end"]
                     try:
                         date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
                     except (OSError, OverflowError):
@@ -94,13 +94,17 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
 
 @app.get("/event")
 async def event(id: int, access_token: str | None = Header(default=None)):
-    r = requests.get(f"{url_api}/events/?fields=dates,title,description,place,"f"images&location=spb&ids={id}")
+    await get_profile(access_token)
+    r = requests.get(f"{url_api}/events/?fields=dates,title,description,id,place,"f"images&location=spb&ids={id}")
     r = r.json()["results"][0]
     place = requests.get(f'https://kudago.com/public-api/v1.4/places/{r["place"]["id"]}/'
                          f'?fields=title,address')  # Поиск адреса
     place = place.json()["address"]
-    date = r["dates"][0]["end"]
-    date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
+    date = r["dates"][-1]["end"]
+    try:
+        date = datetime.fromtimestamp(date)  # Перевод даты в datetime формат
+    except (OSError, OverflowError):
+        date = datetime.fromtimestamp(0)
     weekday = WeekdayNameResolver.resolve(date)
     event = Event(image=r["images"][0]["image"],
                   title=r["title"],
@@ -108,7 +112,8 @@ async def event(id: int, access_token: str | None = Header(default=None)):
                   place=place,
                   date=date.isoformat(),  # Перевод даты в ISO формат
                   is_free=False,  # Заглушка
-                  weekday=weekday)
+                  weekday=weekday,
+                  id=r["id"])
     return {"event": event}
 
 
