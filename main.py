@@ -1,6 +1,6 @@
 import uvicorn
-import math
 from fastapi import FastAPI, HTTPException, Request, Header
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import requests
 from models import Event, Profile
@@ -10,6 +10,13 @@ from weekday import WeekdayNameResolver
 import time
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 url_api = "https://kudago.com/public-api/v1.4"
 places = {}
 
