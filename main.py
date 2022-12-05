@@ -39,10 +39,12 @@ async def register(user: UserForReg):
 
 @app.get("/profile")
 async def get_profile(access_token: str | None = Header(default=None)):
-    profile = Profile(id=1,
-                      name="None",
-                      login="None")  # Заглушка
-    return {"profile": profile}
+    if access_token is None:
+        raise HTTPException(400, detail="no token!")
+    user = UserInteractor.authorized_request(access_token)
+    if user is None:
+        raise HTTPException(400, detail="wrong token!")
+    return Profile(id=user[0], name=user[1], login=user[2])
 
 
 @app.get("/events")
