@@ -56,7 +56,7 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
         page = 1
         url_events = url_api + "/events/?page={}&page_size=100&" \
                                "fields=dates,title,description,id,place,images,site_url&" \
-                               "order_by=id&location=spb&actual_since={}"  # здесь actual_since
+                               "order_by=id&location=spb&actual_since={}&text_format=text"  # здесь actual_since
         event_list = []
         timing = int(time.time())
         while True:
@@ -67,7 +67,7 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
                         place = places[i["place"]["id"]]
                     else:
                         place = requests.get(f'https://kudago.com/public-api/v1.4/places/{i["place"]["id"]}/'
-                                             f'?fields=title,address')  # Поиск адреса
+                                             f'?fields=title,address&text_format=text')  # Поиск адреса
                         place = place.json()
                         if "address" in place:
                             place = place["address"]
@@ -106,10 +106,10 @@ async def events(offset: int, limit: int, access_token: str | None = Header(defa
 @app.get("/event")
 async def event(id: int, access_token: str | None = Header(default=None)):
     await get_profile(access_token)
-    r = requests.get(f"{url_api}/events/?fields=dates,title,description,id,place,"f"images,site_url&location=spb&ids={id}")
+    r = requests.get(f"{url_api}/events/?fields=dates,title,description,id,place,"f"images,site_url&location=spb&ids={id}&text_format=text")
     r = r.json()["results"][0]
     place = requests.get(f'https://kudago.com/public-api/v1.4/places/{r["place"]["id"]}/'
-                         f'?fields=title,address')  # Поиск адреса
+                         f'?fields=title,address&text_format=text')  # Поиск адреса
     place = place.json()["address"]
     date = r["dates"][-1]["end"]
     try:
